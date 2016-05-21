@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 
@@ -10,6 +11,7 @@ namespace YahooFinance.NET
 	public class YahooFinanceClient
 	{
 		private const int MinimumDateRangeDays = -30;
+		private readonly CultureInfo _usCulture = new CultureInfo("en-US");
 
 		private const string BaseUrl = "http://ichart.finance.yahoo.com/table.csv?s=";
 
@@ -83,13 +85,13 @@ namespace YahooFinance.NET
 
 				var newPriceData = new YahooHistoricalPriceData
 				{
-					Date = DateTime.Parse(values[0]),
-					Open = decimal.Parse(values[1]),
-					High = decimal.Parse(values[2]),
-					Low = decimal.Parse(values[3]),
-					Close = decimal.Parse(values[4]),
-					Volume = int.Parse(values[5]),
-					AdjClose = decimal.Parse(values[6])
+					Date = DateTime.Parse(values[0], _usCulture),
+					Open = decimal.Parse(values[1], _usCulture),
+					High = decimal.Parse(values[2], _usCulture),
+					Low = decimal.Parse(values[3], _usCulture),
+					Close = decimal.Parse(values[4], _usCulture),
+					Volume = int.Parse(values[5], _usCulture),
+					AdjClose = decimal.Parse(values[6], _usCulture)
 				};
 				historicalPriceData.Add(newPriceData);
 			}
