@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 
 namespace YahooFinance.NET
 {
@@ -13,11 +15,13 @@ namespace YahooFinance.NET
 		private const string BasePath = "v7/finance/download/";
 		private const string RealTimeUrl = "http://finance.yahoo.com/d/quotes.csv?s=";
 		private const string RealTimeSuffix = "&f=abl1pohgt1nsv";
+        private const string GetCookieCrumbURL = "https://finance.yahoo.com/quote/";
+        private const string GetCookieCrumbPath = "%5EGSPC/history?p=^GSPC";
 
-		private string Cookie = string.Empty;
-		private string Crumb = string.Empty;
+        public string Cookie { get; private set; }
+        public string Crumb { get; private set; }
 
-		private enum HistoryType
+       private enum HistoryType
 		{
 			DividendHistory = 1,
 			Day,
@@ -31,7 +35,61 @@ namespace YahooFinance.NET
 			Crumb = crumb;
 		}
 
-		public string GetYahooStockCode(string exchange, string code)
+        public YahooFinanceClient()
+        {
+            Cookie = string.Empty;
+            Crumb = string.Empty;
+        }
+
+        public void RefreshCookieAndCrumb()
+        {
+            var baseAddress = new Uri(GetCookieCrumbURL);
+            var cookieContainer = new CookieContainer();
+
+            using (var handler = new HttpClientHandler() { UseCookies = true, CookieContainer = cookieContainer })
+            {
+                using (var client = new HttpClient(handler) { BaseAddress = baseAddress })
+                {
+                    using (var response = client.GetAsync(GetCookieCrumbPath).Result)
+                    {
+                        if (response.IsSuccessStatusCode)
+                        {
+                            //find crumb object
+                            var result = response.Content.ReadAsStringAsync().Result;
+                            var crumbLoc = result.LastIndexOf("\"crumb\"");
+                            var deviceLoc = result.LastIndexOf("\"device\"");
+                            Crumb = result.Substring(crumbLoc, deviceLoc - crumbLoc - 2).Remove(0, 9);
+
+                            //get cookie objects
+                            bool found = false;
+                            foreach (DictionaryEntry element in (Hashtable)cookieContainer.GetType().GetField("m_domainTable", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(cookieContainer))
+                            {
+                                if (element.Key.Equals(".yahoo.com"))
+                                {
+                                    SortedList cookieList = (SortedList)element.Value.GetType().GetField("m_list", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(element.Value);
+                                    foreach (DictionaryEntry cookieitems in cookieList)
+                                    {
+                                        var cookies = (CookieCollection)cookieitems.Value;
+                                        foreach (Cookie cookieItem in cookies)
+                                        {
+                                            Cookie = cookieItem.Value.Substring(0, cookieItem.Value.IndexOf("&"));
+                                            found = true;
+                                            break;
+                                        }
+                                        if (found)
+                                        {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public string GetYahooStockCode(string exchange, string code)
 		{
 			var exchangeHelper = new YahooExchangeHelper();
 			return exchangeHelper.GetYahooStockCode(exchange, code);
