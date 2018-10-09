@@ -92,5 +92,23 @@ namespace YahooFinance.NET.Tests
 
 			Assert.Equal(1, yahooDividendHistory.Count);
 		}
-	}
+
+
+        [Fact]
+        public void TryToGetCookie()
+        {
+            //From No Given Cookie/Crumb
+            var yahooFinance = new YahooFinanceClient();
+            yahooFinance.RefreshCookieAndCrumb();
+            Assert.NotEqual(string.Empty, yahooFinance.Cookie);
+            Assert.NotEqual(string.Empty, yahooFinance.Crumb);
+
+            //Changing Cookie/Crumb
+            var oldCookie = yahooFinance.Cookie;
+            var oldCrumb = yahooFinance.Crumb;
+            yahooFinance.RefreshCookieAndCrumb();
+            Assert.NotEqual(oldCookie, yahooFinance.Cookie);
+            Assert.NotEqual(oldCrumb, yahooFinance.Crumb);
+        }
+    }
 }
